@@ -21,10 +21,22 @@ if (process.env.DATABASE_URL) {
     const url = new URL(process.env.DATABASE_URL);
     poolConfig.host = url.hostname || poolConfig.host;
     poolConfig.port = url.port ? parseInt(url.port, 10) : poolConfig.port;
-    poolConfig.user = url.username || poolConfig.user;
-    poolConfig.password = url.password || poolConfig.password;
+    if (url.username) {
+      poolConfig.user = decodeURIComponent(url.username);
+    }
+    if (url.password) {
+      poolConfig.password = decodeURIComponent(url.password);
+    }
     if (url.pathname && url.pathname.length > 1) {
-      poolConfig.database = url.pathname.slice(1);
+      poolConfig.database = decodeURIComponent(url.pathname.slice(1));
+    }
+    // Enable SSL for remote cloud databases (TiDB, Aiven, Railway, etc.)
+    if (
+      process.env.DB_SSL === 'true' ||
+      url.searchParams.get('ssl') ||
+      (url.hostname && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1')
+    ) {
+      poolConfig.ssl = { rejectUnauthorized: false };
     }
   } catch (err) {
     console.warn('Could not parse DATABASE_URL, using default MySQL config:', err.message);
