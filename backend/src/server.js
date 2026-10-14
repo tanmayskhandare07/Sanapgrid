@@ -16,20 +16,25 @@ pool
     console.error('Failed to connect to MySQL database:', err.message);
   });
 
-const server = app.listen(PORT, () => {
-  console.log(`SnapGrid backend server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-});
-
-// Handle graceful shutdown
-const shutdown = async () => {
-  console.log('\nGracefully shutting down server...');
-  server.close(async () => {
-    console.log('HTTP server closed.');
-    await pool.end();
-    console.log('MySQL connection pool closed.');
-    process.exit(0);
+let server;
+if (require.main === module || !process.env.VERCEL) {
+  server = app.listen(PORT, () => {
+    console.log(`SnapGrid backend server running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
   });
-};
 
-process.on('SIGINT', shutdown);
-process.on('SIGTERM', shutdown);
+  // Handle graceful shutdown
+  const shutdown = async () => {
+    console.log('\nGracefully shutting down server...');
+    server.close(async () => {
+      console.log('HTTP server closed.');
+      await pool.end();
+      console.log('MySQL connection pool closed.');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+module.exports = app;
